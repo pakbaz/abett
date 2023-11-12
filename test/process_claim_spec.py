@@ -1,14 +1,12 @@
 from datetime import date
 from expects import expect, equal, raise_error
-from mamba import description, context, it, before
+from mamba import description, context, it, before, after
 import mysql.connector
 import os.path
+import sys
 
-from lib.process_claim import InvalidClaimantError, process_claim
+from lib.process_claim import process_claim, InvalidClaimantError
 
-db_connection = None
-schema_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)),
-                          "schema")
 
 
 # Utility functions for tests to be able to access db rows
@@ -50,11 +48,8 @@ def find_claims_for_claimant(cursor, claimant_type, claimant_id):
     return results
 
 
-with description('lib/process_claim') as self:
+with description('process_claim') as self:
     with before.all:
-        global db_connection
-
-        db_connection = None
         try:
             db_connection = mysql.connector.connect(
                 host='db',
@@ -80,7 +75,7 @@ with description('lib/process_claim') as self:
         sql = None
 
         # Use the unload.sql file to unload all the data
-        with open(os.path.join(schema_dir, "unload.sql")) as f:
+        with open(os.path.join("schema", "unload.sql")) as f:
             sql = f.read()
         try:
             for _ in cursor.execute(sql, multi=True):
@@ -89,7 +84,7 @@ with description('lib/process_claim') as self:
             raise RuntimeError("db error: {0}".format(e))
 
         # Use the data.sql file to load all prerequisite data
-        with open(os.path.join(schema_dir, "data.sql")) as f:
+        with open(os.path.join("schema", "data.sql")) as f:
             sql = f.read()
         try:
             for _ in cursor.execute(sql, multi=True):
@@ -104,7 +99,6 @@ with description('lib/process_claim') as self:
         cursor.close()
 
     with after.all:
-        global db_connection
         db_connection.close()
         db_connection = None
 
